@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Analysis Results{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('index') }}" class="back-link">&larr; Back to upload</a>
+
+<section class="card">
+    <h2>Results for {{ filename }}</h2>
+
+    <div class="kpi-grid">
+        <div class="kpi"><span class="kpi-value">{{ report.n_respondents }}</span><span class="kpi-label">Respondents</span></div>
+        <div class="kpi"><span class="kpi-value">{{ report.n_items }}</span><span class="kpi-label">Items</span></div>
+        <div class="kpi"><span class="kpi-value">{{ report.cronbach_alpha }}</span><span class="kpi-label">Cronbach's α</span></div>
+        {% if dropout_result and dropout_result.auc %}
+        <div class="kpi"><span class="kpi-value">{{ dropout_result.auc }}</span><span class="kpi-label">Dropout Model AUC</span></div>
+        {% endif %}
+    </div>
+
+    <p class="alpha-note">
+        {% if report.cronbach_alpha >= 0.9 %}
+            Excellent internal consistency.
+        {% elif report.cronbach_alpha >= 0.8 %}
+            Good internal consistency.
+        {% elif report.cronbach_alpha >= 0.7 %}
+            Acceptable internal consistency.
+        {% else %}
+            Low internal consistency — consider revising items.
+        {% endif %}
+    </p>
+
+    <a href="{{ url_for('download_excel') }}" class="button">Download Excel Report</a>
+</section>
+
+<section class="card">
+    <h2>Item Statistics</h2>
+    <table>
+        <thead>
+            <tr><th>Item</th><th>Difficulty</th><th>Discrimination</th><th>Mean</th><th>Std Dev</th></tr>
+        </thead>
+        <tbody>
+            {% for item, difficulty in report.item_difficulty.items() %}
+            <tr>
+                <td>{{ item }}</td>
+                <td>{{ difficulty }}</td>
+                <td>{{ report.item_discrimination[item] }}</td>
+                <td>{{ report.descriptives[item].mean }}</td>
+                <td>{{ report.descriptives[item].std }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="hint">Discrimination below ~0.2 suggests an item may not be measuring the same construct as the rest.</p>
+</section>
+
+<section class="card">
+    <h2>Respondent Clusters ({{ cluster_info.n_clusters }} groups)</h2>
+    <table>
+        <thead>
+            <tr><th>Cluster</th><th>Size</th></tr>
+        </thead>
+        <tbody>
+            {% for cluster, size in cluster_info.cluster_sizes.items() %}
+            <tr><td>{{ cluster }}</td><td>{{ size }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% if dropout_result %}
+<section class="card">
+    <h2>Dropout Risk Model</h2>
+    {% if dropout_result.error %}
+        <p>{{ dropout_result.error }}</p>
+    {% else %}
+        <p>Accuracy: {{ dropout_result.accuracy }} | AUC: {{ dropout_result.auc }}</p>
+        <p class="hint">Trained on {{ dropout_result.n_train }} respondents, tested on {{ dropout_result.n_test }}.</p>
+    {% endif %}
+</section>
+{% endif %}
+
+{% endblock %}
